@@ -1,49 +1,96 @@
-### VPC
+# ClickOps Guide — ECS Threat Composer Deployment
+> This guide documents the manual AWS console steps used to deploy the Threat Composer app on ECS Fargate with HTTPS. These steps were completed before recreating the infrastructure in Terraform.
 
-Created a custom VPC with 4 subnets - 2 private and 2 public and placed a public and a private in 2 different AZs for high availability 
+---
 
-Created 2 NAT gateways and placed both inside each public subnet 
+## 1. VPC & Networking
 
-Created an IGW so traffic can be routed 
+1. Created a custom VPC with CIDR `10.0.0.0/16`
+2. Created 4 subnets — 2 public and 2 private, spread across 2 Availability Zones (`eu-west-2a` and `eu-west-2b`) for high availability
+3. Created an Internet Gateway (IGW) and attached it to the VPC to allow public internet traffic
+4. Created 2 NAT Gateways — one in each public subnet — so private subnet resources can access the internet without being publicly exposed
+5. Created 2 route tables:
+   - **Public route table** — associated with both public subnets, with a route sending `0.0.0.0/0` to the IGW
+   - **Private route table** — associated with both private subnets, with a route sending `0.0.0.0/0` to the NAT Gateway
 
-Created 2 route tables - associated both private subnets in one route table and both public subnets in the other 
+---
 
-Created the NAT gateway routes for the private subnet route table and configured it so that the gateways are routed to each subnet 
+## 2. ECR
 
-Created the IGW route for the public subnet route table  
+1. Created a private ECR repository called `ecr-threatmod` with immutable tags and AES-256 encryption
+2. Built the Docker image locally using a multi-stage Dockerfile
+3. Authenticated Docker to ECR using `aws ecr get-login-password`
+4. Tagged the image with the ECR URI and pushed it as `v1.0.0`
 
-### ECS
+---
 
-Created the ECS cluster and configured all necessary options 
+## 3. ECS
 
-Created the task definition - encountered a problem and solved it - the problem was to map the HTTP protocol to port 3000 because that is where the application is hosted 
+1. Created an ECS cluster called `sc-cluster` using Fargate launch type
+2. Created an IAM task execution role (`ecsTaskExecutionRole`) with the `AmazonECSTaskExecutionRolePolicy` managed policy — this allows ECS to pull images from ECR and write logs to CloudWatch
+3. Created a task definition with:
+   - Launch type: Fargate
+   - CPU: 0.5 vCPU / Memory: 1GB
+   - Container name: `ecr-threatmod`
+   - Container port: `3000` (where the app listens)
+   - Execution role: `ecsTaskExecutionRole`
+4. Created an ECS service with 1 desired task, attached to the ALB target group
 
- 
+---
 
-### ALB
+## 4. Security Groups
 
-Created the ALB and target groups -  security group  allowed traffic on port 80 
+Two security groups were created:
 
-The security group for my tasks allowed inbound traffic from the ALBs security group and Custom TCP port 3000 
+**ALB Security Group (`alb-clickops`)**
+- Inbound: HTTP port `80` from `0.0.0.0/0`
+- Inbound: HTTPS port `443` from `0.0.0.0/0`
+- Outbound: All traffic
 
-Target group was hosted on port 3000 as this was where my application was hosted 
+**ECS Task Security Group (`ecs-clickops`)**
+- Inbound: Custom TCP port `3000` from the ALB security group only (least privilege)
+- Outbound: All traffic
 
-The target group is the private IPv4 addresses which are assigned to my tasks from ECS cluster 
+---
 
- 
+## 5. ALB (Application Load Balancer)
 
-### Route 53
+1. Created an ALB called `scthreatmod-alb` — internet-facing, attached to both public subnets
+2. Created a target group (`ecsalb-TG`) with:
+   - Target type: IP (required for Fargate)
+   - Protocol: HTTP / Port: 3000
+   - Health check path: `/`
+3. Created two listeners:
+   - **HTTP:80** — redirects to HTTPS:443
+   - **HTTPS:443** — forwards to the target group, with the ACM certificate attached
 
-I registered the domain - [nginxunais.com](http://nginxunais.com) then also created a subdomain in the public hosted zone called tm.nginxunais.com
+---
 
-Once I had done I made sure that the value assigned to the domain was the albs domain name so that whenever someone types in my domain in the browser, the traffic is routed to the ALB
+## 6. ACM (Certificate Manager)
 
-### ACM
+1. Requested a public TLS certificate for `tm.sc-threat-composer.com`
+2. Selected DNS validation
+3. Added the CNAME validation record to Cloudflare DNS (proxy status: DNS only)
+4. Waited for the certificate status to change to **Issued**
+5. Attached the certificate to the HTTPS listener on the ALB
 
-I requested a TSL certificate for my sub domain so that traffic from HTTPS protocol is able to reach to my website which ensures that data is secure 
+---
 
-I allowed inbound traffic on my ALB security group from port 443 and I also created a HTTPS listener which I then had to specify the cert on my ALB which allowed for the data to be decrypted once the traffic reached my ALB so that the data was readable for users and they connect to the site securely 
+## 7. DNS (Route 53 + Cloudflare)
 
-### Redirection
+1. Created a public hosted zone in Route 53 for `sc-threat-composer.com`
+2. Since the domain was registered on Cloudflare's free plan (nameserver changes not available), a CNAME record was added directly in Cloudflare:
+   - **Name**: `tm`
+   - **Target**: ALB DNS name
+   - **Proxy status**: DNS only (orange cloud off)
+3. This routes `https://tm.sc-threat-composer.com` → ALB → ECS tasks
 
-On the HTTP listener for the ALB, edit listener and choose redirect to URL and then specify the HTTPS protocol on port 443
+---
+
+## 8. Verification
+
+Once all resources were in place, the app was accessible at:
+
+**`https://tm.sc-threat-composer.com`**
+
+After verifying the deployment, all resources were torn down via `terraform destroy` and recreated using Terraform modules.
