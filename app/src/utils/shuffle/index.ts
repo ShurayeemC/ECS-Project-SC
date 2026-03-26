@@ -15,7 +15,7 @@
  ******************************************************************************************************************** */
 
 const shuffle = (array: any[]) => {
-  const resultArray = [...array]; '';
+  const resultArray = [...array];
   let currentIndex = array.length, randomIndex;
 
   while (currentIndex != 0) {
