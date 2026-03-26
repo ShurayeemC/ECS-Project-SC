@@ -23,5 +23,6 @@ variable "vpc_id" {
 }
 
 variable "certificate_arn" {
-  type = string
+  type    = string
+  default = ""
 }

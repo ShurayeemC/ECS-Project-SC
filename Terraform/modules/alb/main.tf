@@ -1,4 +1,4 @@
-resource "aws_lb" "this" {
+resource "aws_lb" "ecs-lb" {
   name               = var.alb_name
   internal           = false
   load_balancer_type = "application"
@@ -6,7 +6,7 @@ resource "aws_lb" "this" {
   subnets            = var.subnet_ids
 }
 
-resource "aws_lb_target_group" "this" {
+resource "aws_lb_target_group" "ecs-tg" {
   name        = var.target_group_name
   port        = var.target_group_port
   protocol    = "HTTP"
@@ -33,17 +33,17 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.this.arn
+  load_balancer_arn = aws_lb.ecs-lb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.this.arn
+    target_group_arn = aws_lb_target_group.ecs-tg.arn
 
     forward {
       target_group {
-        arn    = aws_lb_target_group.this.arn
+        arn    = aws_lb_target_group.ecs-tg.arn
         weight = 1
       }
       stickiness {
@@ -55,18 +55,18 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.this.arn
+  load_balancer_arn = aws_lb.ecs-lb.arn
   port              = 443
   protocol          = "HTTPS"
   certificate_arn   = var.certificate_arn
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.this.arn
+    target_group_arn = aws_lb_target_group.ecs-tg.arn
 
     forward {
       target_group {
-        arn    = aws_lb_target_group.this.arn
+        arn    = aws_lb_target_group.ecs-tg.arn
         weight = 1
       }
       stickiness {
