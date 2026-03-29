@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Copying the rest of the source code
-COPY . /app/ 
+COPY . .
 
 # Runs the commands to execute the build process for the image and yarn creates a directory called build which shows all the production files
 RUN yarn install && yarn build
