@@ -16,7 +16,7 @@ module "alb" {
   vpc_id             = module.vpc.vpc_id
   target_group_port  = 80
   certificate_arn    = module.acm.certificate_arn
-  depends_on = [module.acm]
+  depends_on         = [module.acm]
 }
 
 module "dns" {
@@ -31,7 +31,7 @@ module "acm" {
 }
 
 module "ecs" {
-  source = "./modules/ecs"
+  source                = "./modules/ecs"
   private_subnet_ids    = module.vpc.private_subnet_ids
   ecs_security_group_id = module.securitygroups.ecs_security_group_id
   target_group_arn      = module.alb.target_group_arn

@@ -52,7 +52,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_allow_https" {
 
 resource "aws_vpc_security_group_egress_rule" "alb_allow_all_outbound" {
   security_group_id = aws_security_group.alb-sg.id
-  cidr_ipv4   = "0.0.0.0/0"
-  ip_protocol = "-1"
-  
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+
 }

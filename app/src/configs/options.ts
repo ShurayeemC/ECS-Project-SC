@@ -23,6 +23,6 @@ export const LEVEL_SELECTOR_OPTIONS = [
 ];
 
 export const LEVEL_SELECTOR_OPTIONS_INCLUDING_ALL = [
-  { lable: ALL_LEVELS, value: ALL_LEVELS },
+  { label: ALL_LEVELS, value: ALL_LEVELS },
   ...LEVEL_SELECTOR_OPTIONS,
 ];

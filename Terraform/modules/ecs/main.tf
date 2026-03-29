@@ -50,7 +50,7 @@ resource "aws_ecs_service" "ecsproject-service" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
-   network_configuration {
+  network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_security_group_id]
     assign_public_ip = false
@@ -61,6 +61,4 @@ resource "aws_ecs_service" "ecsproject-service" {
     container_name   = "ecr-threatmod"
     container_port   = 3000
   }
-
- 
 }
