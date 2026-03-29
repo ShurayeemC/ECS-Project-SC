@@ -1,0 +1,20 @@
+name: Check Health Of App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Health check
+        run: |
+          if curl --fail https://tm.sc-threat-composer.com/health; then
+            echo "Health check passed - app is up"
+          else
+            echo "Health check failed - app is down"
+            exit 1
+          fi
+
+          
