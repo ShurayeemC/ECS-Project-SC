@@ -19,7 +19,10 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: eu-west-2   
+          aws-region: eu-west-2 
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3    
           
       - name: Terraform Init
         run: terraform init

@@ -21,8 +21,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: eu-west-2   
 
-         
-      - name: Terraform Init
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3       
+      
+        - name: Terraform Init
         run: terraform init
         working-directory: Terraform
           
